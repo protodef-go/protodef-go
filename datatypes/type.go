@@ -1,17 +1,21 @@
 package datatypes
 
-import "github.com/tidwall/gjson"
+import (
+	"github.com/tidwall/gjson"
+)
 
 type Type struct {
-	Name string
-	Type string
+	Name     string
+	TypeName string
+
+	Extras any
 }
 
 func GetTypeFromJSON(name string, option gjson.Result) *Type {
 	if option.Type == gjson.String && option.String() == "native" {
 		return GetNativeType(name)
 	}
-	t := GetType(option)
+	t := GetType(name, option)
 	if t != nil {
 		t.Name = name
 		return t
@@ -19,7 +23,7 @@ func GetTypeFromJSON(name string, option gjson.Result) *Type {
 	return nil
 }
 
-func GetType(d gjson.Result) *Type {
+func GetType(name string, d gjson.Result) *Type {
 	var t *Type
 	if d.Type == gjson.String {
 		t = GetNativeType(d.String())
@@ -32,15 +36,19 @@ func GetType(d gjson.Result) *Type {
 		t = &Type{}
 		arr := d.Array()
 		arr_len := len(arr)
-		if arr_len > 0 {
+		if arr_len == 2 {
 			arr_type := arr[0]
 			if arr_type.Type == gjson.String {
-				switch arr_type.String() {
+				t.TypeName = arr_type.String()
+				switch t.TypeName {
 				case "container":
-					t.Type = "container"
+					t.Extras = &Container{}
+
+					t.Extras.(*Container).ReadJSON(arr[1])
 				}
 			}
 		}
+		return t
 	}
 	return nil
 }
